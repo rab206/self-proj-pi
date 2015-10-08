@@ -587,7 +587,7 @@ class WitAiSTT(AbstractSTTEngine):
 
     def transcribe(self, fp):
         data = fp.read()
-        r = requests.post('https://api.wit.ai/speech?v=20150101',
+        r = requests.post('https://api.wit.ai/speech?v=20151002',
                           data=data,
                           headers=self.headers)
         try:
@@ -610,11 +610,8 @@ class WitAiSTT(AbstractSTTEngine):
                                   exc_info=True)
             return []
         else:
-            transcribed = []
-            if text:
-                transcribed.append(text.upper())
-            self._logger.info('Transcribed: %r', transcribed)
-            return transcribed
+            self._logger.warning('Transcribed: %r', r.json())
+            return  r.json()
 
     @classmethod
     def is_available(cls):

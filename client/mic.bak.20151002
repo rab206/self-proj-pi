@@ -11,8 +11,6 @@ import alteration
 import jasperpath
 import crossbarconnect
 import json
-import wit
-import time
 
 class Mic:
 
@@ -36,13 +34,6 @@ class Mic:
         self._audio = pyaudio.PyAudio()
         self.client = crossbarconnect.Client("http://127.0.0.1:8080/publish")
         self._logger.warning("websocket connected")
-	profile_path = jasperpath.config('profile.yml')
-        if os.path.exists(profile_path):
-            with open(profile_path, 'r') as f:
-                profile = yaml.safe_load(f)
-                if 'witai-stt' in profile:
-                    if 'access_token' in profile['witai-stt']:
-                        self.token = profile['witai-stt']['access_token']
     
     def __del__(self):
 	self._audio.terminate()
@@ -222,52 +213,48 @@ class Mic:
         self.speaker.play(jasperpath.data('audio', 'beep_hi.wav'))
 
         # prepare recording stream
-        #stream = self._audio.open(format=pyaudio.paInt16,
-        #                          channels=1,
-        #                          rate=RATE,
-        #                          input=True,
-        #                          frames_per_buffer=CHUNK)
-	#
-	#       frames = []
+        stream = self._audio.open(format=pyaudio.paInt16,
+                                  channels=1,
+                                  rate=RATE,
+                                  input=True,
+                                  frames_per_buffer=CHUNK)
+
+        frames = []
         # increasing the range # results in longer pause after command
         # generation
-        #lastN = [THRESHOLD * 1.2 for i in range(30)]
+        lastN = [THRESHOLD * 1.2 for i in range(30)]
 
-        #for i in range(0, RATE / CHUNK * LISTEN_TIME):
+        for i in range(0, RATE / CHUNK * LISTEN_TIME):
 
-        #    data = stream.read(CHUNK)
-        #    frames.append(data)
-        #    score = self.getScore(data)
-	#
-        #    lastN.pop(0)
-        #    lastN.append(score)
-	#
-        #    average = sum(lastN) / float(len(lastN))
-	
+            data = stream.read(CHUNK)
+            frames.append(data)
+            score = self.getScore(data)
+
+            lastN.pop(0)
+            lastN.append(score)
+
+            average = sum(lastN) / float(len(lastN))
+
             # TODO: 0.8 should not be a MAGIC NUMBER!
-        #    if average < THRESHOLD * 0.8:
-        #        break
-	wit.init()
-	response = wit.voice_query_auto(self.token)
-	wit.close()
+            if average < THRESHOLD * 0.8:
+                break
 
         self.speaker.play(jasperpath.data('audio', 'beep_lo.wav'))
 	self._logger.warning("playing lo")
 
         # save the audio data
-        #stream.stop_stream()
-        #stream.close()
+        stream.stop_stream()
+        stream.close()
 
-        #with tempfile.SpooledTemporaryFile(mode='w+b') as f:
-        #    wav_fp = wave.open(f, 'wb')
-        #    wav_fp.setnchannels(1)
-        #    wav_fp.setsampwidth(pyaudio.get_sample_size(pyaudio.paInt16))
-        #    wav_fp.setframerate(RATE)
-        #    wav_fp.writeframes(''.join(frames))
-        #    wav_fp.close()
-        #    f.seek(0)	
-	#return json.dumps(self.active_stt_engine.transcribe(f))
-	return response
+        with tempfile.SpooledTemporaryFile(mode='w+b') as f:
+            wav_fp = wave.open(f, 'wb')
+            wav_fp.setnchannels(1)
+            wav_fp.setsampwidth(pyaudio.get_sample_size(pyaudio.paInt16))
+            wav_fp.setframerate(RATE)
+            wav_fp.writeframes(''.join(frames))
+            wav_fp.close()
+            f.seek(0)	
+            return json.dumps(self.active_stt_engine.transcribe(f))
 
     def say(self, phrase,
             OPTIONS=" -vdefault+m3 -p 40 -s 160 --stdout > say.wav"):

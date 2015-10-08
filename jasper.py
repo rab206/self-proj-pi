@@ -112,7 +112,8 @@ class Jasper(object):
                           % self.config["first_name"])
         else:
             salutation = "How can I be of service?"
-        self.mic.say(salutation)
+        #self.mic.say(salutation)
+	print(salutation)
 
         conversation = Conversation("JASPER", self.mic, self.config)
         conversation.handleForever()
